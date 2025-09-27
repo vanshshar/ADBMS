@@ -1,0 +1,108 @@
+-- Create the Table
+
+CREATE TABLE StudentEnrollments (
+    enrollment_id INT PRIMARY KEY,
+    student_name VARCHAR(100) NOT NULL,
+    course_id VARCHAR(10) NOT NULL,
+    enrollment_date DATE NOT NULL,
+    CONSTRAINT unique_student_course UNIQUE(student_name, course_id)
+);
+
+-- Describe the Table
+DESC StudentEnrollments;
+
+-- Part A: Prevent Duplicate Enrollments Using Locking
+
+START TRANSACTION;
+
+INSERT INTO StudentEnrollments (enrollment_id, student_name, course_id, enrollment_date)
+VALUES (1, 'Ashish', 'CSE101', '2024-07-01');
+
+INSERT INTO StudentEnrollments (enrollment_id, student_name, course_id, enrollment_date)
+VALUES (2, 'Smaran', 'CSE102', '2024-07-01');
+
+INSERT INTO StudentEnrollments (enrollment_id, student_name, course_id, enrollment_date)
+VALUES (3, 'Vaibhav', 'CSE101', '2024-07-01');
+
+COMMIT;
+
+SELECT * FROM StudentEnrollments;
+
+START TRANSACTION;
+INSERT INTO StudentEnrollments (enrollment_id, student_name, course_id, enrollment_date)
+VALUES (4, 'Kiran', 'CSE103', '2024-07-02');
+COMMIT;
+
+SELECT * FROM StudentEnrollments;
+
+START TRANSACTION;
+INSERT INTO StudentEnrollments (enrollment_id, student_name, course_id, enrollment_date)
+VALUES (5, 'Ashish', 'CSE101', '2024-07-02');
+COMMIT;
+
+SELECT * FROM StudentEnrollments;
+
+-- Part B: Use SELECT FOR UPDATE to Lock Student Record
+
+START TRANSACTION;
+SELECT * 
+FROM StudentEnrollments
+WHERE student_name = 'Ashish' AND course_id = 'CSE101'
+FOR UPDATE;
+
+-- User B tries while User A has not committed yet
+UPDATE StudentEnrollments
+SET enrollment_date = '2024-07-05'
+WHERE student_name = 'Ashish' AND course_id = 'CSE101';
+
+COMMIT;
+
+SELECT * FROM StudentEnrollments;
+
+-- Part C: Demonstrate Locking Preserving Consistency
+
+-- Without Locking
+START TRANSACTION;
+UPDATE StudentEnrollments
+SET course_id = 'CSE201'
+WHERE student_name = 'Ashish' AND course_id = 'CSE101';
+
+-- Not committed yet
+
+START TRANSACTION;
+UPDATE StudentEnrollments
+SET course_id = 'CSE301'
+WHERE student_name = 'Ashish' AND course_id = 'CSE101';
+COMMIT;
+
+SELECT * FROM StudentEnrollments;
+
+-- With Locking
+START TRANSACTION;
+SELECT * 
+FROM StudentEnrollments
+WHERE student_name = 'Ashish' AND course_id = 'CSE101'
+FOR UPDATE;
+
+UPDATE StudentEnrollments
+SET course_id = 'CSE201'
+WHERE student_name = 'Ashish' AND course_id = 'CSE101';
+
+COMMIT;
+
+START TRANSACTION;
+SELECT * 
+FROM StudentEnrollments
+WHERE student_name = 'Ashish' AND course_id = 'CSE101'
+FOR UPDATE;
+
+UPDATE StudentEnrollments
+SET course_id = 'CSE301'
+WHERE student_name = 'Ashish' AND course_id = 'CSE101';
+
+COMMIT;
+
+SELECT * FROM StudentEnrollments;
+
+-- Final Verification
+SELECT * FROM StudentEnrollments;
