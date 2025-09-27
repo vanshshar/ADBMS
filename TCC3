@@ -1,0 +1,117 @@
+-- Create the Table
+
+CREATE TABLE StudentEnrollments (
+    student_id INT PRIMARY KEY,
+    student_name VARCHAR(100) NOT NULL,
+    course_id VARCHAR(10) NOT NULL,
+    enrollment_date DATE NOT NULL
+);
+
+-- Describe the Table
+DESC StudentEnrollments;
+
+-- Insert initial data
+START TRANSACTION;
+
+INSERT INTO StudentEnrollments (student_id, student_name, course_id, enrollment_date)
+VALUES (1, 'Ashish', 'CSE101', '2024-06-01');
+
+INSERT INTO StudentEnrollments (student_id, student_name, course_id, enrollment_date)
+VALUES (2, 'Smaran', 'CSE102', '2024-06-01');
+
+INSERT INTO StudentEnrollments (student_id, student_name, course_id, enrollment_date)
+VALUES (3, 'Vaibhav', 'CSE103', '2024-06-01');
+
+COMMIT;
+
+SELECT * FROM StudentEnrollments;
+
+-- Part A: Simulating a Deadlock Between Two Transactions
+
+-- Session A (User A)
+START TRANSACTION;
+UPDATE StudentEnrollments
+SET enrollment_date = '2024-07-01'
+WHERE student_id = 1;
+
+-- Session B (User B) - runs at the same time
+START TRANSACTION;
+UPDATE StudentEnrollments
+SET enrollment_date = '2024-07-02'
+WHERE student_id = 2;
+
+-- Now User A tries to update row locked by User B
+UPDATE StudentEnrollments
+SET enrollment_date = '2024-07-03'
+WHERE student_id = 2;
+
+-- User B tries to update row locked by User A
+UPDATE StudentEnrollments
+SET enrollment_date = '2024-07-04'
+WHERE student_id = 1;
+
+-- At this point, the database detects deadlock
+-- One of the transactions will be aborted automatically
+
+-- Check current table state after deadlock resolution
+SELECT * FROM StudentEnrollments;
+
+
+-- Part B: Applying MVCC to Prevent Conflicts During Concurrent Reads/Writes
+
+
+-- Session A (User A) - reads without locking
+START TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+SELECT * FROM StudentEnrollments WHERE student_id = 1;
+
+-- Session B (User B) - updates concurrently
+START TRANSACTION;
+UPDATE StudentEnrollments
+SET enrollment_date = '2024-07-10'
+WHERE student_id = 1;
+COMMIT;
+
+-- Session A continues to see old value
+SELECT * FROM StudentEnrollments WHERE student_id = 1;
+COMMIT;
+
+-- Check final table state after MVCC updates
+
+SELECT * FROM StudentEnrollments;
+
+
+-- Part C: Comparing Behavior With and Without MVCC in High-Concurrency
+
+-- Without MVCC / Using SELECT FOR UPDATE
+-- Session A (Reader)
+START TRANSACTION;
+SELECT * FROM StudentEnrollments
+WHERE student_id = 1
+FOR UPDATE;
+
+-- Session B (Writer) tries to update
+UPDATE StudentEnrollments
+SET enrollment_date = '2024-08-01'
+WHERE student_id = 1;
+-- This will be blocked until Session A commits
+
+COMMIT;
+
+-- With MVCC / Repeatable Read
+-- Session A (Reader)
+START TRANSACTION ISOLATION LEVEL REPEATABLE READ;
+SELECT * FROM StudentEnrollments WHERE student_id = 1;
+
+-- Session B (Writer)
+START TRANSACTION;
+UPDATE StudentEnrollments
+SET enrollment_date = '2024-08-10'
+WHERE student_id = 1;
+COMMIT;
+
+-- Session A still sees old value
+SELECT * FROM StudentEnrollments WHERE student_id = 1;
+COMMIT;
+
+-- Final verification
+SELECT * FROM StudentEnrollments;
