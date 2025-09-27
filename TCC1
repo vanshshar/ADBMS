@@ -1,0 +1,96 @@
+-- Create the Table
+
+CREATE TABLE FeePayments (
+    payment_id INT PRIMARY KEY,
+    student_name VARCHAR(100) NOT NULL,
+    amount DECIMAL(10,2) CHECK (amount > 0),
+    payment_date DATE NOT NULL
+);
+
+-- Describe the Table Structure
+DESC FeePayments;
+
+-- Part A: Insert Multiple Fee Payments in a Transaction
+START TRANSACTION;
+
+INSERT INTO FeePayments (payment_id, student_name, amount, payment_date)
+VALUES (1, 'Ashish', 5000.00, '2024-06-01');
+
+INSERT INTO FeePayments (payment_id, student_name, amount, payment_date)
+VALUES (2, 'Smaran', 4500.00, '2024-06-02');
+
+INSERT INTO FeePayments (payment_id, student_name, amount, payment_date)
+VALUES (3, 'Vaibhav', 5500.00, '2024-06-03');
+
+COMMIT;
+
+-- Check after commit
+
+SELECT * FROM FeePayments;
+
+
+-- Part B: Demonstrate ROLLBACK for Failed Payment Insertion
+
+START TRANSACTION;
+
+-- This one is valid but will be rolled back
+INSERT INTO FeePayments (payment_id, student_name, amount, payment_date)
+VALUES (4, 'Kiran', 4000.00, '2024-06-04');
+
+-- This will fail (duplicate ID = 1 and negative amount)
+INSERT INTO FeePayments (payment_id, student_name, amount, payment_date)
+VALUES (1, 'Ashish', -3000.00, '2024-06-05');
+
+ROLLBACK;
+
+-- Check table state
+
+SELECT * FROM FeePayments;
+
+
+-- Part C: Simulate Partial Failure and Ensure Consistent State
+
+START TRANSACTION;
+
+-- Valid insert
+INSERT INTO FeePayments (payment_id, student_name, amount, payment_date)
+VALUES (5, 'Ravi', 4800.00, '2024-06-06');
+
+-- Invalid insert (student_name NULL)
+INSERT INTO FeePayments (payment_id, student_name, amount, payment_date)
+VALUES (6, NULL, 5200.00, '2024-06-07');
+
+ROLLBACK;
+
+-- Check table state
+
+SELECT * FROM FeePayments;
+
+-- Part D: Verify ACID Compliance with Transaction Flow
+
+-- Start with valid inserts
+START TRANSACTION;
+
+INSERT INTO FeePayments (payment_id, student_name, amount, payment_date)
+VALUES (7, 'Megha', 6000.00, '2024-06-08');
+
+INSERT INTO FeePayments (payment_id, student_name, amount, payment_date)
+VALUES (8, 'Rohan', 6200.00, '2024-06-09');
+
+COMMIT;
+
+-- Now try a failing transaction
+START TRANSACTION;
+
+INSERT INTO FeePayments (payment_id, student_name, amount, payment_date)
+VALUES (9, 'Ankit', 7000.00, '2024-06-10');
+
+-- Fails (duplicate ID = 7)
+INSERT INTO FeePayments (payment_id, student_name, amount, payment_date)
+VALUES (7, 'DuplicateMegha', 7500.00, '2024-06-11');
+
+ROLLBACK;
+
+-- Final Verification
+
+SELECT * FROM FeePayments;
